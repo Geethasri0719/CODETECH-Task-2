@@ -1,1 +1,5 @@
-# CODETECH-Task-2
+Name:KUPPALA GEETHA SRI
+Company:CODETECH IT SOLUTIONS
+Intern ID: CT08DS9947
+Domain:Machine Learning
+Duration: NOVEMBER to DECEMBER 2024
