@@ -1,0 +1,88 @@
+pip install pandas numpy scikit-learn tensorflow keras
+
+import pandas as pd
+
+# Load the dataset
+data = pd.read_csv('/content/IMDB Dataset.csv')
+
+# Check the first few rows
+print(data.head())
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Encode sentiment labels
+label_encoder = LabelEncoder()
+data['sentiment'] = label_encoder.fit_transform(data['sentiment'])  # positive=1, negative=0
+
+# Split into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    data['review'], data['sentiment'], test_size=0.2, random_state=42
+)
+
+# Tokenize and pad sequences
+max_vocab_size = 10000
+max_sequence_length = 200
+
+tokenizer = Tokenizer(num_words=max_vocab_size)
+tokenizer.fit_on_texts(X_train)
+
+X_train_seq = tokenizer.texts_to_sequences(X_train)
+X_test_seq = tokenizer.texts_to_sequences(X_test)
+
+X_train_padded = pad_sequences(X_train_seq, maxlen=max_sequence_length, padding='post')
+X_test_padded = pad_sequences(X_test_seq, maxlen=max_sequence_length, padding='post')
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout
+
+# Define the model
+model = Sequential([
+    Embedding(input_dim=max_vocab_size, output_dim=128, input_length=max_sequence_length),
+    LSTM(64, return_sequences=False),
+    Dropout(0.5),
+    Dense(64, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')  # Sigmoid for binary classification
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.summary()
+
+history = model.fit(
+    X_train_padded, y_train,
+    epochs=5,
+    batch_size=64,
+    validation_data=(X_test_padded, y_test),
+    verbose=2
+)
+
+from sklearn.metrics import classification_report
+
+# Evaluate on the test set
+test_loss, test_accuracy = model.evaluate(X_test_padded, y_test, verbose=0)
+print(f"Test Accuracy: {test_accuracy:.2f}")
+
+# Generate predictions
+predictions = (model.predict(X_test_padded) > 0.5).astype("int32")
+print(classification_report(y_test, predictions))
+
+model.save('kaggle_sentiment_model.h5')
+
+from tensorflow.keras.models import load_model
+
+# Load the model
+model = load_model('kaggle_sentiment_model.h5')
+
+# Predict
+sample_review = ["The plot was engaging and characters were well-developed."]
+sample_sequence = tokenizer.texts_to_sequences(sample_review)
+sample_padded = pad_sequences(sample_sequence, maxlen=max_sequence_length, padding='post')
+prediction = model.predict(sample_padded)
+print("Positive" if prediction[0] > 0.5 else "Negative")
+
+
+
